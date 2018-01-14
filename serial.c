@@ -4,17 +4,17 @@
 #include "serial.h"
 
 //helper function to tokenize a string
-char** stringToArr(char* str, int N)
+int* stringToArr(char* str, int N)
 {
    char* c;
-   char** outArr = (char**) malloc(N * sizeof(char*));
+   int* outArr = (int*) malloc(N * sizeof(int));
    int index = 0; 
    c = strtok(str, " ");
-   char cp[1000];
+   //char cp[1000];
    while (c != NULL)
    {
-      strcpy(cp, c);
-      outArr[index] = c; 
+      //strcpy(cp, c);
+      outArr[index] = atoi(c); 
       c = strtok(NULL, " ");
       //printf("%s\n", outArr[0]); 
       index += 1;
@@ -22,10 +22,11 @@ char** stringToArr(char* str, int N)
    return outArr;
 }
 
-// does two things: reads the file data into adjList and then return the size (N, number of nodes) of the adjList
-int readData(char* fileName, int** adjList)
+// does one thing: returns the newly created adjacency list
+int** readData(char* fileName)
 {
-   int size;
+   int size = 0;
+   int** adjList = NULL;
    FILE *file = fopen(fileName, "r");
    if (file != NULL)
    {
@@ -42,18 +43,28 @@ int readData(char* fileName, int** adjList)
       }
 
       // now load the text file into adjList 
+      int index = 0;
       while (fgets(line, sizeof(line), file) != NULL)
       {
-         
-
+         adjList[index] = stringToArr(line, size);
+         index += 1;
       }
+      printf("TRY: %d\n", adjList[2][3]);
+
    }
-   return 0;
+   fclose(file);
+   return adjList;
 }
 
-int writeData(char* fileName, int** minList)
+int writeData(char* fileName, int** minList, int N)
 {
-   return 0;
+   FILE *file = fopen(fileName, "w");
+   if (file == NULL)
+   {
+      printf("Something bad happened when opening file\n");
+      return -1;
+   }
+      
 }
 
 int solvePaths(int** adjList, int** minList)
@@ -64,15 +75,21 @@ int solvePaths(int** adjList, int** minList)
 int main()
 {
    /* To test string tokenization */
-   /*
-   int** adjList = (int**) malloc(N * sizeof(int *));
+   
+   //int** adjList = (int**) malloc(N * sizeof(int *));
+   printf("Testing part 1:\n");
    char str[] = "5 6 7 8 9";
-   char** t1 = stringToArr(str, 5);
+   int* t1 = stringToArr(str, 5);
    for (int i = 0; i < 5; i++)
    {
-      printf("%s\n", t1[i]);
-   }*/
+      printf("%d\n", t1[i]);
+   }
 
-
+   printf("Testing part 2:\n");
+   int** t2 = NULL;
+   //int size;
+   t2 = readData("test.txt"); 
+   printf("Size: %lu\n", sizeof(t2[0]));
+   printf("%d\n", t2[2][3]);
    return(0);
 }
