@@ -14,8 +14,10 @@ char** stringToArr(char* str, int N)
    while (c != NULL)
    {
       strcpy(cp, c);
-      outArr[index] = cp; 
+      outArr[index] = c; 
       c = strtok(NULL, " ");
+      //printf("%s\n", outArr[0]); 
+      index += 1;
    }
    return outArr;
 }
@@ -61,11 +63,16 @@ int solvePaths(int** adjList, int** minList)
 
 int main()
 {
-   //int** adjList = (int**) malloc(N * sizeof(int *));
-   char** t1 = stringToArr("5 6 7 8 9", 5);
+   /* To test string tokenization */
+   /*
+   int** adjList = (int**) malloc(N * sizeof(int *));
+   char str[] = "5 6 7 8 9";
+   char** t1 = stringToArr(str, 5);
    for (int i = 0; i < 5; i++)
    {
-      printf("%s", t1[i]);
-   }
+      printf("%s\n", t1[i]);
+   }*/
+
+
    return(0);
 }
