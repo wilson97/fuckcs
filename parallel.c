@@ -1,7 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "serial.h"
+#include "parallel.h"
+
+/* 
+Plan: The base function will spin up T threads that are running the inner dist block. When they finish updating dist
+for the i and j they are given, they will lock i and j, read them, update them, and then unlock them (using pthread mutex). To make sure all threads wait before advancing to next k we can use a pthread_barrier (do we even need this?) 
+*/
+
 
 // helper function to tokenize a string
 int* stringToArr(char* str, int N)
@@ -111,7 +117,6 @@ int** solvePaths(int** adjList, int N)
       {
          for (int j = 0; j < N; j++)
          {
-            //(1,2) (1,0), (0,2)
             if (dist[i][j] > dist[i][k] + dist[k][j])
             {
                dist[i][j] = dist[i][k] + dist[k][j];
@@ -124,28 +129,9 @@ int** solvePaths(int** adjList, int N)
 
 int main()
 {
-   /* To test string tokenization */
-   
-   //int** adjList = (int**) malloc(N * sizeof(int *));
-   printf("Testing part 1:\n");
-   /*
-   char str[] = "5 6 7 8 9";
-   int* t1 = stringToArr(str, 5);
-   for (int i = 0; i < 5; i++)
-   {
-      printf("%d\n", t1[i]);
-   }*/
-
-   printf("Testing part 2:\n");
    int** t2 = NULL;
-   //int size;
    t2 = readData("1.txt");
    int size = getSize("1.txt"); 
-   printf("Size: %d\n", size);
-   //printf("Size: %lu\n", sizeof(t2[0]));
-   //printf("%d\n", t2[2][3]);
-
-   printf("Testing part 3:\n");
    int** t3 = NULL;
    t3 = solvePaths(t2, size);
    writeData("output.txt", t3, size);
