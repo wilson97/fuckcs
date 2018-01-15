@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 #include "parallel.h"
 
 /* 
@@ -15,12 +16,16 @@ typedef struct counters
    int k;
    int** dist;
    int N;
-   pthread_mutex_t *mutex_i;
-   pthread_mutex_t *mutex_j; 
+   //pthread_mutex_t *mutex_i;
+   //pthread_mutex_t *mutex_j; 
+   pthread_mutex_t *mutex;
    // k over is 1, still work to do is 0
    int isKDone;   
 
 } counters;
+
+// pthread_barrier
+pthread_barrier_t bar;
 
 // helper function to tokenize a string
 int* stringToArr(char* str, int N)
@@ -131,15 +136,19 @@ int solvePathStart(int** adjList, int N, int T)
    cs.k = 0;
    cs.N = N;
    cs.dist->dist;
-   pthread_mutex_t mutex_i;
-   pthread_mutex_init(&mutex_i, NULL);
-   pthread_mutex_t mutex_j;
-   pthread_mutex_init(&mutex_j, NULL);
-   cs.mutex_i = &mutex_i;
-   cs.mutex_j = &mutex_j;
+   //pthread_mutex_t mutex_i;
+   //pthread_mutex_init(&mutex_i, NULL);
+   //pthread_mutex_t mutex_j;
+   //pthread_mutex_init(&mutex_j, NULL);
+   pthread_mutex_t mutex;
+   pthread_mutex_init(&mutex, NULL);
+   cs.mutex_i = &mutex;
+   //cs.mutex_i = &mutex_i;
+   //cs.mutex_j = &mutex_j;
    cs.isKDone = 0;
 
    pthread_t* thread_list = (pthread_t*) malloc(T * sizeof(pthread_t));
+   pthread_barrier_init(&bar, NULL, T);
    for (int i = 0; i < T; i++)
    {
       pthread_t thread;
@@ -151,6 +160,7 @@ int solvePathStart(int** adjList, int N, int T)
       pthread_join(thread_list[i], NULL);
    }
 
+   pthread_barrier_destroy(&bar);
    return 0;
 }
 
@@ -159,41 +169,66 @@ void* solvePaths(void *ptr)
 {
    // first lock i and j and read it
    counters *cs = (counters *) ptr;
-   pthread_mutex_lock(cs->mutex_i);
-   pthread_mutex_lock(cs->mutex_j);   
+   //pthread_mutex_lock(cs->mutex_i);
+   //pthread_mutex_lock(cs->mutex_j);
    
+   int N = cs.N
+   int k = 0;
+   int hit = 0;
+   while (k < N)
+   {
+
+   pthread_mutex_lock(cs->mutex);   
+   int i = cs.i;
+   int j = cs.j;
+   k = cs.k;
    // now check if i and j are at their maximal values
    if (cs.isKDone == 1)
    {
-      // update k/hit barrier - TODO
+      pthread_mutex_unlock(cs->mutex);
+      pthread_barrier_wait(&bar);
+       
    }
    else
    {
-      if (dist[cs.i][cs.j] > dist[cs.i][cs.k] + dist[cs.k][cs.j])
-      {
-         dist[cs.i][cs.j] = dist[cs.i][cs.k] + dist[cs.k][cs.j];
-      }      
 
-      if (cs.j == N-1)
+      if (j == N-1)
       {
-         if (cs.i == N-1)
+         if (i == N-1)
          {
             cs.isKDone = 1;
+            cs.i = 0;
+            cs.j = 0;
+            cs.k += 1;
          } 
          else
          {
-            cs.i += 1;
-            cs.j = 0;
+            i += 1;
+            j = 0;
          }
       }
       else
       {
-         cs.j += 1;
+         j += 1;
       } 
+
+      pthread_mutex_unlock(cs->mutex);      
+
+      // update rule
+      if (dist[i][j] > dist[i][k] + dist[k][j])
+      {
+         dist[i][j] = dist[i][k] + dist[k][j];
+      }
+
+      //if (hit == 1)
+      //{
+      //   hit = 0;
+      //   pthread_barrier_wait(&bar);
+      //     
+      //}
    }
 
-   pthread_mutex_unlock(cs->mutex_i);
-   pthread_mutex_unlock(cs->mutex_j);
+   }
 
 }
 
