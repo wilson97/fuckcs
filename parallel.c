@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+// for testing
+#include <unistd.h>
 #include "parallel.h"
 
 /* 
@@ -16,6 +18,7 @@ typedef struct counters
    int k;
    int** dist;
    int N;
+   //int tid;
    //pthread_mutex_t *mutex_i;
    //pthread_mutex_t *mutex_j; 
    pthread_mutex_t *mutex;
@@ -170,6 +173,7 @@ int** solvePathStart(int** adjList, int N, int T)
 // follow the wikipedia algorithm
 void* solvePaths(void *ptr)
 {
+   printf("Thread Entered!\n");
    // first lock i and j and read it
    counters *cs = (counters *) ptr;
    //pthread_mutex_lock(cs->mutex_i);
@@ -187,11 +191,15 @@ void* solvePaths(void *ptr)
    int i = cs->i;
    int j = cs->j;
    k = cs->k;
+   //printf("Working with i:%d j:%d k:%d and N:%d\n", i, j, k, N);
    // now check if i and j are at their maximal values
    if (cs->isKDone == 1)
    {
+      printf("In if block for some reason\n");
       pthread_mutex_unlock(cs->mutex);
+      //printf("Arrived at the first barrier\n");
       pthread_barrier_wait(&bar);
+      //printf("Past the first barrier\n");
 
       // once everyone is done with k, we use another barrier to make sure isKDone is set to 0 before all the threads go.
       if (theOne == 1)
@@ -205,15 +213,18 @@ void* solvePaths(void *ptr)
    }
    else
    {
-
+      printf("Working with i:%d j:%d k:%d and N:%d\n", i, j, k, N);
       if (j == N-1)
       {
          if (i == N-1)
          {
+            //sleep(3);
+            //printf("??? wtf\n");
             cs->isKDone = 1;
             cs->i = 0;
             cs->j = 0;
             cs->k += 1;
+            theOne = 1;
          } 
          else
          {
@@ -223,6 +234,7 @@ void* solvePaths(void *ptr)
       }
       else
       {
+         //printf("should be getting here\n");
          cs->j += 1;
       } 
 
