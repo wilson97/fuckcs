@@ -26,6 +26,7 @@ typedef struct counters
 
 // pthread_barrier
 pthread_barrier_t bar;
+pthread_barrier_t k_update;
 
 // helper function to tokenize a string
 int* stringToArr(char* str, int N)
@@ -110,7 +111,7 @@ int writeData(char* fileName, int** minList, int N)
 }
 
 // the base function, initalizes dist, starts the threads
-int solvePathStart(int** adjList, int N, int T)
+int** solvePathStart(int** adjList, int N, int T)
 {
    if (N == 0)
    {
@@ -135,20 +136,21 @@ int solvePathStart(int** adjList, int N, int T)
    cs.j = 0;
    cs.k = 0;
    cs.N = N;
-   cs.dist->dist;
+   cs.dist = dist;
    //pthread_mutex_t mutex_i;
    //pthread_mutex_init(&mutex_i, NULL);
    //pthread_mutex_t mutex_j;
    //pthread_mutex_init(&mutex_j, NULL);
    pthread_mutex_t mutex;
    pthread_mutex_init(&mutex, NULL);
-   cs.mutex_i = &mutex;
+   cs.mutex = &mutex;
    //cs.mutex_i = &mutex_i;
    //cs.mutex_j = &mutex_j;
    cs.isKDone = 0;
 
    pthread_t* thread_list = (pthread_t*) malloc(T * sizeof(pthread_t));
    pthread_barrier_init(&bar, NULL, T);
+   pthread_barrier_init(&k_update, NULL, T);
    for (int i = 0; i < T; i++)
    {
       pthread_t thread;
@@ -161,7 +163,8 @@ int solvePathStart(int** adjList, int N, int T)
    }
 
    pthread_barrier_destroy(&bar);
-   return 0;
+   pthread_barrier_destroy(&k_update);
+   return dist;
 }
 
 // follow the wikipedia algorithm
@@ -171,23 +174,34 @@ void* solvePaths(void *ptr)
    counters *cs = (counters *) ptr;
    //pthread_mutex_lock(cs->mutex_i);
    //pthread_mutex_lock(cs->mutex_j);
+
+   // if this is set to 1, this thread will be the one setting isKDone to 0.
+   int theOne = 0;
    
-   int N = cs.N
+   int N = cs->N;
    int k = 0;
-   int hit = 0;
    while (k < N)
    {
 
    pthread_mutex_lock(cs->mutex);   
-   int i = cs.i;
-   int j = cs.j;
-   k = cs.k;
+   int i = cs->i;
+   int j = cs->j;
+   k = cs->k;
    // now check if i and j are at their maximal values
-   if (cs.isKDone == 1)
+   if (cs->isKDone == 1)
    {
       pthread_mutex_unlock(cs->mutex);
       pthread_barrier_wait(&bar);
-       
+
+      // once everyone is done with k, we use another barrier to make sure isKDone is set to 0 before all the threads go.
+      if (theOne == 1)
+      {
+         pthread_mutex_lock(cs->mutex);
+         cs->isKDone = 0;
+         pthread_mutex_unlock(cs->mutex);
+         theOne = 0;
+      } 
+      pthread_barrier_wait(&k_update);
    }
    else
    {
@@ -196,40 +210,34 @@ void* solvePaths(void *ptr)
       {
          if (i == N-1)
          {
-            cs.isKDone = 1;
-            cs.i = 0;
-            cs.j = 0;
-            cs.k += 1;
+            cs->isKDone = 1;
+            cs->i = 0;
+            cs->j = 0;
+            cs->k += 1;
          } 
          else
          {
-            i += 1;
-            j = 0;
+            cs->i += 1;
+            cs->j = 0;
          }
       }
       else
       {
-         j += 1;
+         cs->j += 1;
       } 
 
       pthread_mutex_unlock(cs->mutex);      
 
       // update rule
-      if (dist[i][j] > dist[i][k] + dist[k][j])
+      if (cs->dist[i][j] > cs->dist[i][k] + cs->dist[k][j])
       {
-         dist[i][j] = dist[i][k] + dist[k][j];
+         cs->dist[i][j] = cs->dist[i][k] + cs->dist[k][j];
       }
 
-      //if (hit == 1)
-      //{
-      //   hit = 0;
-      //   pthread_barrier_wait(&bar);
-      //     
-      //}
    }
 
    }
-
+   pthread_exit(0);
 }
 
 int main()
@@ -238,7 +246,7 @@ int main()
    t2 = readData("1.txt");
    int size = getSize("1.txt"); 
    int** t3 = NULL;
-   t3 = solvePaths(t2, size);
+   t3 = solvePathStart(t2, size, 4);
    writeData("output.txt", t3, size);
    return(0);
 }
