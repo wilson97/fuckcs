@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "serial.h"
+#include "stopwatch.c"
 
 // helper function to tokenize a string
 int* stringToArr(char* str, int N)
@@ -147,7 +148,11 @@ int main()
 
    printf("Testing part 3:\n");
    int** t3 = NULL;
+   StopWatch_t sw;
+   startTimer(&sw);
    t3 = solvePaths(t2, size);
-   writeData("output.txt", t3, size);
+   stopTimer(&sw);
+   printf("Elapsed Time: %f\n", getElapsedTime(&sw));
+   writeData("answer.txt", t3, size);
    return(0);
 }

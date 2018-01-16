@@ -14,23 +14,25 @@ for the i and j they are given, they will lock i and j, read them, update them, 
 
 typedef struct counters
 {
-   int i;
-   int j;
-   int k;
+   //int i;
+   int thread_id;
+   //int j;
+   //int k;
    int** dist;
    int N;
+   int T;
    //int tid;
    //pthread_mutex_t *mutex_i;
    //pthread_mutex_t *mutex_j; 
-   pthread_mutex_t *mutex;
+   //pthread_mutex_t *mutex;
    // k over is 1, still work to do is 0
-   int isKDone;   
+   //int isKDone;   
 
 } counters;
 
 // pthread_barrier
 pthread_barrier_t bar;
-pthread_barrier_t k_update;
+//pthread_barrier_t k_update;
 
 // helper function to tokenize a string
 int* stringToArr(char* str, int N)
@@ -135,39 +137,43 @@ int** solvePathStart(int** adjList, int N, int T)
    }
 
    // set up shared objects to pass to threads
-   counters cs;
-   cs.i = 0;
-   cs.j = 0;
-   cs.k = 0;
-   cs.N = N;
-   cs.dist = dist;
+   //counters cs;
+   //cs.i = 0;
+   //cs.j = 0;
+   //cs.k = 0;
+   //cs.N = N;
+   //cs.dist = dist;
    //pthread_mutex_t mutex_i;
    //pthread_mutex_init(&mutex_i, NULL);
    //pthread_mutex_t mutex_j;
    //pthread_mutex_init(&mutex_j, NULL);
-   pthread_mutex_t mutex;
-   pthread_mutex_init(&mutex, NULL);
-   cs.mutex = &mutex;
+   //pthread_mutex_t mutex;
+   //pthread_mutex_init(&mutex, NULL);
+   //cs.mutex = &mutex;
    //cs.mutex_i = &mutex_i;
    //cs.mutex_j = &mutex_j;
-   cs.isKDone = 0;
+   //cs.isKDone = 0;
 
    pthread_t* thread_list = (pthread_t*) malloc(T * sizeof(pthread_t));
    pthread_barrier_init(&bar, NULL, T);
-   pthread_barrier_init(&k_update, NULL, T);
    for (int i = 0; i < T; i++)
    {
       pthread_t thread;
-      pthread_create(&thread, NULL, solvePaths, (void *) &cs);
+      counters *cs = (counters*) malloc(sizeof(cs));
+      cs->N = N;
+      cs->thread_id = i; 
+      cs->dist = dist;
+      cs->T = T;
+      pthread_create(&thread, NULL, solvePaths, cs);
+      //printf("Thread creation id: %d\n", cs.thread_id);
       thread_list[i] = thread;
    }   
-   for (int i = 0; i < T; i++)
+   for (int j = 0; j < T; j++)
    {
-      pthread_join(thread_list[i], NULL);
+      pthread_join(thread_list[j], NULL);
    }
 
    pthread_barrier_destroy(&bar);
-   pthread_barrier_destroy(&k_update);
    return dist;
 }
 
@@ -176,79 +182,38 @@ void* solvePaths(void *ptr)
 {
    //printf("Thread Entered!\n");
    // first lock i and j and read it
+   //printf("Thread started!\n");
    counters *cs = (counters *) ptr;
-   //pthread_mutex_lock(cs->mutex_i);
-   //pthread_mutex_lock(cs->mutex_j);
-
-   // if this is set to 1, this thread will be the one setting isKDone to 0.
-   int theOne = 0;
-   
-   int N = cs->N;
+   int counter = cs->thread_id; 
    int k = 0;
-   while (k < N)
+   //printf("Thread id is:%d\n", cs->thread_id);
+   while (k < cs->N)
    {
-   printf("k is: %d\n", k);
-   pthread_mutex_lock(cs->mutex);   
-   int i = cs->i;
-   int j = cs->j;
-   k = cs->k;
-   //printf("Working with i:%d j:%d k:%d and N:%d\n", i, j, k, N);
-   // now check if i and j are at their maximal values
-   if (cs->isKDone == 1)
-   {
-      //printf("In if block for some reason\n");
-      pthread_mutex_unlock(cs->mutex);
-      //printf("Arrived at the first barrier\n");
+      
+      //printf("Thread id is:%d\n", cs->thread_id);      
+      while (counter < cs->N * cs->N)
+      {
+         int i = counter / cs->N;
+         int j = counter - i*cs->N;
+         //printf("Working on i: %d and j:%d and k:%d with thread:%d \n", i, j, k, cs->thread_id);      
+
+         // update rule
+         if (cs->dist[i][j] > cs->dist[i][k] + cs->dist[k][j])
+         {
+            cs->dist[i][j] = cs->dist[i][k] + cs->dist[k][j];
+         }      
+         //printf("N is %d with thread %d\n", cs->N, cs->thread_id);
+         //printf("Working on i: %d and j:%d and k:%d with thread:%d \n", i, j, k, cs->thread_id);
+
+         counter += cs->T;
+      }
+      
+      // update k here
+      //printf("Barrier hit with thread %d and k=%d \n", cs->thread_id, k);
       pthread_barrier_wait(&bar);
-      //printf("Past the first barrier\n");
-
-      // once everyone is done with k, we use another barrier to make sure isKDone is set to 0 before all the threads go.
-      if (theOne == 1)
-      {
-         pthread_mutex_lock(cs->mutex);
-         cs->isKDone = 0;
-         pthread_mutex_unlock(cs->mutex);
-         theOne = 0;
-      } 
-      pthread_barrier_wait(&k_update);
-   }
-   else
-   {
-      //printf("Working with i:%d j:%d k:%d and N:%d\n", i, j, k, N);
-      if (j == N-1)
-      {
-         if (i == N-1)
-         {
-            //sleep(3);
-            //printf("??? wtf\n");
-            cs->isKDone = 1;
-            cs->i = 0;
-            cs->j = 0;
-            cs->k += 1;
-            theOne = 1;
-         } 
-         else
-         {
-            cs->i += 1;
-            cs->j = 0;
-         }
-      }
-      else
-      {
-         //printf("should be getting here\n");
-         cs->j += 1;
-      } 
-
-      pthread_mutex_unlock(cs->mutex);      
-
-      // update rule
-      if (cs->dist[i][j] > cs->dist[i][k] + cs->dist[k][j])
-      {
-         cs->dist[i][j] = cs->dist[i][k] + cs->dist[k][j];
-      }
-
-   }
-
+      k += 1;   
+      counter = cs->thread_id;
+      //printf("k updated with thread %d and counter %d \n", cs->thread_id, counter);
    }
    pthread_exit(0);
 }
@@ -261,7 +226,7 @@ int main()
    int** t3 = NULL;
    StopWatch_t sw;
    startTimer(&sw);   
-   t3 = solvePathStart(t2, size, 10);
+   t3 = solvePathStart(t2, size, 4);
    stopTimer(&sw);
    printf("Elapsed Time: %f\n", getElapsedTime(&sw));
    writeData("output.txt", t3, size);
