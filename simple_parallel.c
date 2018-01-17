@@ -21,6 +21,8 @@ typedef struct counters
    int** dist;
    int N;
    int T;
+   int firstRow; // inclusive
+   int lastRow; // not inclusive
    //int tid;
    //pthread_mutex_t *mutex_i;
    //pthread_mutex_t *mutex_j; 
@@ -136,26 +138,14 @@ int** solvePathStart(int** adjList, int N, int T)
       }
    }
 
-   // set up shared objects to pass to threads
-   //counters cs;
-   //cs.i = 0;
-   //cs.j = 0;
-   //cs.k = 0;
-   //cs.N = N;
-   //cs.dist = dist;
-   //pthread_mutex_t mutex_i;
-   //pthread_mutex_init(&mutex_i, NULL);
-   //pthread_mutex_t mutex_j;
-   //pthread_mutex_init(&mutex_j, NULL);
-   //pthread_mutex_t mutex;
-   //pthread_mutex_init(&mutex, NULL);
-   //cs.mutex = &mutex;
-   //cs.mutex_i = &mutex_i;
-   //cs.mutex_j = &mutex_j;
-   //cs.isKDone = 0;
-
    pthread_t* thread_list = (pthread_t*) malloc(T * sizeof(pthread_t));
    pthread_barrier_init(&bar, NULL, T);
+
+   // algorithm for determing row many rows each thread does
+   int R = N % T;
+   int floor = N / T;
+   int totalRows = 0;
+
    for (int i = 0; i < T; i++)
    {
       pthread_t thread;
@@ -164,10 +154,20 @@ int** solvePathStart(int** adjList, int N, int T)
       cs->thread_id = i; 
       cs->dist = dist;
       cs->T = T;
+      cs->firstRow = totalRows;
+      if (i < R)
+      {
+         cs->lastRow = totalRows + floor + 1;
+         totalRows += floor + 1;
+      }
+      else
+      {
+         cs->lastRow = totalRows + floor;
+         totalRows += floor;
+      }
       pthread_create(&thread, NULL, solvePaths, cs);
-      //printf("Thread creation id: %d\n", cs.thread_id);
       thread_list[i] = thread;
-   }   
+   }
    for (int j = 0; j < T; j++)
    {
       pthread_join(thread_list[j], NULL);
@@ -180,53 +180,141 @@ int** solvePathStart(int** adjList, int N, int T)
 // follow the wikipedia algorithm
 void* solvePaths(void *ptr)
 {
-   //printf("Thread Entered!\n");
-   // first lock i and j and read it
-   //printf("Thread started!\n");
+   //StopWatch_t sw;
+   //startTimer(&sw);
+
    counters *cs = (counters *) ptr;
-   int counter = cs->thread_id; 
+   //int counter = cs->thread_id; 
+   //int size = 0;
+   int N = cs->N;
+   //int T = cs->T;
    int k = 0;
-   //printf("Thread id is:%d\n", cs->thread_id);
-   while (k < cs->N)
+   int firstRow = cs->firstRow;
+   int lastRow = cs->lastRow;
+   /*
+   // maybe first precompute the i/j values?
+   while (counter < N * N)
    {
-      
-      //printf("Thread id is:%d\n", cs->thread_id);      
-      while (counter < cs->N * cs->N)
+      //int i = counter / N; 
+      //int j = counter - i*N;
+      counter += T;
+      size += 1;   
+   }
+
+   int i_list[size]; 
+   //int* i_list = (int*) malloc(size * sizeof(int));
+   int j_list[size]; 
+   counter = cs->thread_id;      
+   int index = 0;
+
+   
+   while (counter < N * N)
+   {
+      int temp = counter / N;
+      i_list[index] = temp;
+      //printf("temp is: %d\n", temp);
+      j_list[index] = counter - temp*N;
+      counter += T;
+      index += 1;
+   }
+   */
+
+   //stopTimer(&sw);
+   //printf("Elapsed Time for thread setup: %f in i j update\n", getElapsedTime(&sw));
+   /*
+   for (int i = 0; i < size; i++)
+   {
+      printf("%d\n", i_list[i]);
+   }
+   */
+
+  // printf("i_list end is: %d\n", i_list[size - 1]);
+   //startTimer(&sw);
+   while (k < N)
+   {
+      for (int i = firstRow; i < lastRow; i++)
       {
-         int i = counter / cs->N;
-         int j = counter - i*cs->N;
+         for (int j = 0; j < N; j++)
+         {
+            //(1,2) (1,0), (0,2)
+            if (cs->dist[i][j] > cs->dist[i][k] + cs->dist[k][j])
+            {
+               cs->dist[i][j] = cs->dist[i][k] + cs->dist[k][j];
+            }
+         }
+      }      
+      //startTimer(&sw);
+      //printf("Thread id is:%d\n", cs->thread_id);      
+
+      /*
+      while (counter < N * N)
+      {
+         int i = 0;
+         int j = 0;
+         //startTimer(&sw);
+         //int i = counter / N;
+         //int j = counter - i*N;
+         //int i = counter / cs->N;
+         //int j = counter - i*cs->N;
+         //stopTimer(&sw);
+         //printf("Elapsed Time: %f in i j update\n", getElapsedTime(&sw));
          //printf("Working on i: %d and j:%d and k:%d with thread:%d \n", i, j, k, cs->thread_id);      
 
          // update rule
+         //startTimer(&sw);
          if (cs->dist[i][j] > cs->dist[i][k] + cs->dist[k][j])
          {
             cs->dist[i][j] = cs->dist[i][k] + cs->dist[k][j];
-         }      
+         }
+         //stopTimer(&sw);
+         //printf("Elapsed Time in update rule: %f\n", getElapsedTime(&sw));      
          //printf("N is %d with thread %d\n", cs->N, cs->thread_id);
          //printf("Working on i: %d and j:%d and k:%d with thread:%d \n", i, j, k, cs->thread_id);
 
-         counter += cs->T;
+         //startTimer(&sw);
+         counter += T;
+         //stopTimer(&sw);
+         //printf("Elapsed Time in counter + T: %f\n", getElapsedTime(&sw));
+         
       }
-      
+      */
+      /*
+      for (int a = 0; a < size; a++)
+      {
+         if (cs->dist[i_list[a]][j_list[a]] > cs->dist[i_list[a]][k] + cs->dist[k][j_list[a]])
+         {
+            cs->dist[i_list[a]][j_list[a]] = cs->dist[i_list[a]][k] + cs->dist[k][j_list[a]];
+         }      
+      }
+      */
+      //stopTimer(&sw);
+      //printf("Elapsed Time in inner loop: %f\n", getElapsedTime(&sw));      
+
       // update k here
       //printf("Barrier hit with thread %d and k=%d \n", cs->thread_id, k);
+      //startTimer(&sw);
       pthread_barrier_wait(&bar);
+      //stopTimer(&sw);
+      //printf("Elapsed Time in barrier wait: %f\n", getElapsedTime(&sw));  
       k += 1;   
-      counter = cs->thread_id;
+      //counter = cs->thread_id;
       //printf("k updated with thread %d and counter %d \n", cs->thread_id, counter);
    }
+   //stopTimer(&sw);
+   //stopTimer(&sw);
+   //printf("Elapsed Time in outer loop: %f\n", getElapsedTime(&sw));
    pthread_exit(0);
 }
 
 int main()
 {
    int** t2 = NULL;
-   t2 = readData("2.txt");
-   int size = getSize("2.txt"); 
+   t2 = readData("1.txt");
+   int size = getSize("1.txt"); 
    int** t3 = NULL;
    StopWatch_t sw;
    startTimer(&sw);   
-   t3 = solvePathStart(t2, size, 4);
+   t3 = solvePathStart(t2, size, 1);
    stopTimer(&sw);
    printf("Elapsed Time: %f\n", getElapsedTime(&sw));
    writeData("output.txt", t3, size);
