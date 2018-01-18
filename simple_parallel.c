@@ -130,40 +130,60 @@ int** solvePathStart(int** adjList, int N, int T)
    }
 
    pthread_t* thread_list = (pthread_t*) malloc(T * sizeof(pthread_t));
-   pthread_barrier_init(&bar, NULL, T);
+   //pthread_barrier_init(&bar, NULL, T);
 
    // algorithm for determing row many rows each thread does
    int R = N % T;
    int floor = N / T;
    int totalRows = 0;
 
-   for (int i = 0; i < T; i++)
-   {
-      pthread_t thread;
-      counters *cs = (counters*) malloc(sizeof(counters));
-      //printf("Before block\n");
-      cs->N = N;
-      cs->thread_id = i; 
-      cs->dist = dist;
-      cs->T = T;
-      cs->firstRow = totalRows;
-      
-      if (i < R)
+   // TODO: need to test
+   if (T > N)
+   { 
+      pthread_barrier_init(&bar, NULL, N);
+      for (int i = 0; i < N; i++)
       {
-         cs->lastRow = totalRows + floor + 1;
-         totalRows += floor + 1;
+         pthread_t thread;
+         counters *cs = (counters*) malloc(sizeof(counters));
+         cs->N = N;
+         cs->thread_id = i;
+         cs->dist = dist;
+         cs->T = T;
+         cs->firstRow = i;
+         cs->lastRow = i + 1;           
+         pthread_create(&thread, NULL, solvePaths, cs);
+         thread_list[i] = thread;
       }
-      else
-      {
-         cs->lastRow = totalRows + floor;
-         totalRows += floor;
-      }
-      //printf("Before making the thread\n");
-      pthread_create(&thread, NULL, solvePaths, cs);
-      //printf("After making the thread\n");
-      thread_list[i] = thread;
-
    }
+
+   else
+   {
+      pthread_barrier_init(&bar, NULL, T);
+      for (int i = 0; i < T; i++)
+      {
+         pthread_t thread;
+         counters *cs = (counters*) malloc(sizeof(counters));
+         cs->N = N;
+         cs->thread_id = i; 
+         cs->dist = dist;
+         cs->T = T;
+         cs->firstRow = totalRows;
+      
+         if (i < R)
+         {
+            cs->lastRow = totalRows + floor + 1;
+            totalRows += floor + 1;
+         }
+         else
+         {
+            cs->lastRow = totalRows + floor;
+            totalRows += floor;
+         }
+         pthread_create(&thread, NULL, solvePaths, cs);
+         thread_list[i] = thread;
+      }
+   }
+
    for (int j = 0; j < T; j++)
    {
       pthread_join(thread_list[j], NULL);
@@ -181,10 +201,8 @@ void* solvePaths(void *ptr)
    int k = 0;
    int firstRow = cs->firstRow;
    int lastRow = cs->lastRow;
-   printf("lastRow is: %d\n", lastRow);
    while (k < N)
-   {
-      
+   {   
       for (int i = firstRow; i < lastRow; i++)
       {
          for (int j = 0; j < N; j++)
@@ -203,15 +221,28 @@ void* solvePaths(void *ptr)
    pthread_exit(0);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+   int T = 1;
+   char* fileName;
+   if (argc == 3)
+   {
+      T = atoi(argv[1]);
+      fileName = argv[2];
+   }
+   else
+   {
+      printf("Wrong number of arguments specified\n");
+      return(1);
+   }
+
    int** t2 = NULL;
-   t2 = readData("2.txt");
-   int size = getSize("2.txt"); 
+   t2 = readData(fileName);
+   int size = getSize(fileName); 
    int** t3 = NULL;
    StopWatch_t sw;
    startTimer(&sw);   
-   t3 = solvePathStart(t2, size, 6);
+   t3 = solvePathStart(t2, size, T);
    stopTimer(&sw);
    printf("Elapsed Time: %f\n", getElapsedTime(&sw));
    writeData("output.txt", t3, size);
