@@ -140,8 +140,8 @@ int main()
    printf("Testing part 2:\n");
    int** t2 = NULL;
    //int size;
-   t2 = readData("1.txt");
-   int size = getSize("1.txt"); 
+   t2 = readData("2.txt");
+   int size = getSize("2.txt"); 
    printf("Size: %d\n", size);
    //printf("Size: %lu\n", sizeof(t2[0]));
    //printf("%d\n", t2[2][3]);
