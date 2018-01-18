@@ -1,15 +1,24 @@
 import random
+import sys
+size = sys.argv[1];
+open("tests/" + size + '.txt', 'w').close()
 
-with open('2.txt', 'a') as f:
+with open("tests/" + size + '.txt', 'a') as f:
 	f.truncate()
-	f.write('1000\n')
-	for x in range(0, 1000):
+	f.write(size + '\n')
+	for x in range(0, int(size)):
 		print x
-		for y in range(0, 1000):
+		for y in range(0, int(size)):
 			if (x == y):
-				f.write('0 ')
+				if (x == int(size) - 1):
+					f.write('0')
+				else:
+					f.write('0 ')
 			else:
-				short = str(random.randint(0,10)) + ' '
-				f.write(short)	
+                                if (y == int(size) - 1):
+					f.write(str(random.randint(1,10)))
+				else:
+					short = str(random.randint(1,10)) + ' '
+					f.write(short)	
 		f.write('\n')
 				

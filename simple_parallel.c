@@ -137,51 +137,34 @@ int** solvePathStart(int** adjList, int N, int T)
    int floor = N / T;
    int totalRows = 0;
 
-   // TODO: need to test
    if (T > N)
-   { 
-      pthread_barrier_init(&bar, NULL, N);
-      for (int i = 0; i < N; i++)
-      {
-         pthread_t thread;
-         counters *cs = (counters*) malloc(sizeof(counters));
-         cs->N = N;
-         cs->thread_id = i;
-         cs->dist = dist;
-         cs->T = T;
-         cs->firstRow = i;
-         cs->lastRow = i + 1;           
-         pthread_create(&thread, NULL, solvePaths, cs);
-         thread_list[i] = thread;
-      }
+   {
+      T = N; 
    }
 
-   else
+   pthread_barrier_init(&bar, NULL, T);
+   for (int i = 0; i < T; i++)
    {
-      pthread_barrier_init(&bar, NULL, T);
-      for (int i = 0; i < T; i++)
-      {
-         pthread_t thread;
-         counters *cs = (counters*) malloc(sizeof(counters));
-         cs->N = N;
-         cs->thread_id = i; 
-         cs->dist = dist;
-         cs->T = T;
-         cs->firstRow = totalRows;
+      pthread_t thread;
+      counters *cs = (counters*) malloc(sizeof(counters));
+      cs->N = N;
+      cs->thread_id = i; 
+      cs->dist = dist;
+      cs->T = T;
+      cs->firstRow = totalRows;
       
-         if (i < R)
-         {
-            cs->lastRow = totalRows + floor + 1;
-            totalRows += floor + 1;
-         }
-         else
-         {
-            cs->lastRow = totalRows + floor;
-            totalRows += floor;
-         }
-         pthread_create(&thread, NULL, solvePaths, cs);
-         thread_list[i] = thread;
+      if (i < R)
+      {
+         cs->lastRow = totalRows + floor + 1;
+         totalRows += floor + 1;
       }
+      else
+      {
+         cs->lastRow = totalRows + floor;
+         totalRows += floor;
+      }
+      pthread_create(&thread, NULL, solvePaths, cs);
+      thread_list[i] = thread;
    }
 
    for (int j = 0; j < T; j++)
@@ -244,7 +227,7 @@ int main(int argc, char *argv[])
    startTimer(&sw);   
    t3 = solvePathStart(t2, size, T);
    stopTimer(&sw);
-   printf("Elapsed Time: %f\n", getElapsedTime(&sw));
+   printf("Elapsed Time for parallel with %d threads and size %d is: %f\n", T, size, getElapsedTime(&sw));
    writeData("output.txt", t3, size);
    return(0);
 }

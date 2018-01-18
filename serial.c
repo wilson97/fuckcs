@@ -17,6 +17,7 @@ int* stringToArr(char* str, int N)
       c = strtok(NULL, " ");
       index += 1;
    }
+   //printf("Final Index is: %d, N is %d\n", index - 1, N);
    return outArr;
 }
 
@@ -45,7 +46,7 @@ int** readData(char* fileName)
    FILE *file = fopen(fileName, "r");
    if (file != NULL)
    {
-      char line[10000];
+      char line[12345];
       // the first line will have N, the size of the adjList, so now we can initialize adjList
       if (fgets(line, sizeof(line), file) != NULL)
       {
@@ -76,8 +77,10 @@ int writeData(char* fileName, int** minList, int N)
    }
    for (int i = 0; i < N; i++)
    {
+      //printf("i is : %d\n", i);
       for (int j = 0; j < N; j++)
       {
+         //printf("j is : %d\n", j);
          fprintf(file, "%d ", minList[i][j]);      
       }
       fprintf(file, "%s", "\n");
@@ -112,7 +115,6 @@ int** solvePaths(int** adjList, int N)
       {
          for (int j = 0; j < N; j++)
          {
-            //(1,2) (1,0), (0,2)
             if (dist[i][j] > dist[i][k] + dist[k][j])
             {
                dist[i][j] = dist[i][k] + dist[k][j];
@@ -123,36 +125,25 @@ int** solvePaths(int** adjList, int N)
    return dist;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-   /* To test string tokenization */
-   
-   //int** adjList = (int**) malloc(N * sizeof(int *));
-   printf("Testing part 1:\n");
-   /*
-   char str[] = "5 6 7 8 9";
-   int* t1 = stringToArr(str, 5);
-   for (int i = 0; i < 5; i++)
+   char* fileName = "10.txt";
+   if (argc == 2)
    {
-      printf("%d\n", t1[i]);
-   }*/
+      fileName = argv[1];
+   }
 
-   printf("Testing part 2:\n");
-   int** t2 = NULL;
-   //int size;
-   t2 = readData("2.txt");
-   int size = getSize("2.txt"); 
-   printf("Size: %d\n", size);
-   //printf("Size: %lu\n", sizeof(t2[0]));
-   //printf("%d\n", t2[2][3]);
-
-   printf("Testing part 3:\n");
+   int** t2 = readData(fileName);
+   int size = getSize(fileName); 
+   //printf("Size is %d\n", size);
    int** t3 = NULL;
    StopWatch_t sw;
    startTimer(&sw);
    t3 = solvePaths(t2, size);
    stopTimer(&sw);
-   printf("Elapsed Time: %f\n", getElapsedTime(&sw));
+   printf("Elapsed Time for serial with size %d is: %f\n", size, getElapsedTime(&sw));
    writeData("answer.txt", t3, size);
+   //if (t2 == NULL) {}
+
    return(0);
 }
